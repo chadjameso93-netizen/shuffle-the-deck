@@ -3,93 +3,129 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAnalysis } from '@/components/providers/AnalysisProvider';
-import type { AnalysisResponse } from '@/lib/types/analysis';
 
 export default function StartPage() {
+  const router = useRouter();
+  const { setAnalysis } = useAnalysis();
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { setLatestAnalysis } = useAnalysis();
-  const router = useRouter();
+  const [error, setError] = useState('');
 
-  async function handleSubmit() {
-    const trimmed = input.trim();
-    if (!trimmed) return;
-
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!input.trim()) return;
     setLoading(true);
-    setError(null);
-
+    setError('');
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: trimmed }),
+        body: JSON.stringify({ situation: input.trim() }),
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data?.error ?? 'Analysis failed. Please try again.');
-        setLoading(false);
-        return;
-      }
-
-      const result: AnalysisResponse = await res.json();
-
-      // Primary: set in shared provider
-      setLatestAnalysis(result);
-
-      // Fallback: encode in URL so /app/now survives a refresh
-      const encoded = encodeURIComponent(JSON.stringify(result));
-      router.push('/app/now?a=' + encoded);
-    } catch {
-      setError('Network error. Please try again.');
+      if (!res.ok) throw new Error('Analysis failed');
+      const data = await res.json();
+      setAnalysis(data);
+      const encoded = encodeURIComponent(JSON.stringify(data));
+      router.push(`/app/now?a=${encoded}`);
+    } catch (err) {
+      setError('Something went wrong. Please try again.');
+    } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main style={{ padding: '2rem', maxWidth: '560px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Describe the situation</h1>
-      <p style={{ color: '#555', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-        Be as specific as you can. What is actually happening right now?
-      </p>
+    <main style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem',
+      background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 50%, #16213e 100%)',
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: '600px',
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div style={{
+            display: 'inline-block',
+            fontSize: '2.5rem',
+            marginBottom: '0.75rem',
+          }}>🃏</div>
+          <h1 style={{
+            fontSize: '2rem',
+            fontWeight: '700',
+            color: '#ffffff',
+            marginBottom: '0.5rem',
+            letterSpacing: '-0.02em',
+          }}>Shuffle the Deck</h1>
+          <p style={{
+            fontSize: '1rem',
+            color: '#94a3b8',
+            lineHeight: '1.6',
+          }}>Describe your situation and get a clear-eyed read on what’s actually happening.</p>
+        </div>
 
-      <textarea
-        rows={6}
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="What is happening in this relationship or situation?"
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          fontSize: '1rem',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          marginBottom: '1rem',
-          resize: 'vertical',
-          boxSizing: 'border-box',
-        }}
-      />
+        <form onSubmit={handleSubmit}>
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="What’s going on? Describe the situation in your own words…"
+            rows={6}
+            style={{
+              width: '100%',
+              padding: '1rem 1.25rem',
+              fontSize: '1rem',
+              lineHeight: '1.7',
+              color: '#e2e8f0',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: '12px',
+              resize: 'vertical',
+              outline: 'none',
+              boxSizing: 'border-box',
+              fontFamily: 'inherit',
+              transition: 'border-color 0.2s',
+            }}
+            onFocus={(e) => e.target.style.borderColor = 'rgba(139,92,246,0.6)'}
+            onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.12)'}
+          />
 
-      {error && (
-        <p style={{ color: '#c00', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</p>
-      )}
+          {error && (
+            <p style={{
+              color: '#f87171',
+              fontSize: '0.875rem',
+              marginTop: '0.5rem',
+              marginBottom: '0',
+            }}>{error}</p>
+          )}
 
-      <button
-        onClick={handleSubmit}
-        disabled={loading || !input.trim()}
-        style={{
-          padding: '0.75rem 1.5rem',
-          background: loading || !input.trim() ? '#999' : '#000',
-          color: '#fff',
-          border: 'none',
-          fontWeight: 'bold',
-          cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
-          fontSize: '1rem',
-        }}
-      >
-        {loading ? 'Analyzing...' : 'Analyze'}
-      </button>
+          <button
+            type="submit"
+            disabled={loading || !input.trim()}
+            style={{
+              marginTop: '1rem',
+              width: '100%',
+              padding: '0.875rem',
+              background: loading || !input.trim()
+                ? 'rgba(139,92,246,0.3)'
+                : 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+              letterSpacing: '0.01em',
+              transition: 'opacity 0.2s',
+            }}
+          >
+            {loading ? 'Reading the cards…' : 'Analyze'}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }
