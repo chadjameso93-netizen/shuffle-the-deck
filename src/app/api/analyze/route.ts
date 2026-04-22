@@ -1,63 +1,82 @@
-import { NextRequest, NextResponse } from "next/server";
-import { AnalyzeInputEnvelopeSchema } from "@/lib/server/analyze/input-envelope";
-import { buildSharedAnalysis } from "@/lib/server/analyze/build-shared-analysis";
-import { buildInitialCanvasScene } from "@/lib/server/analyze/build-initial-canvas-scene";
-// import { buildLearnModule } from "@/lib/server/analyze/build-learn-module";
-import { saveSharedAnalysis, saveCanvasScene, saveWorkspaceSession } from "@/lib/server/persistence";
-import { generateCanonicalId } from "@/lib/canonical/utils/ids";
-import { mockLearnModule } from "@/lib/canonical/fixtures/learn-module.fixture";
+import { NextResponse } from 'next/server';
+import type { AnalysisResponse } from '@/lib/types/analysis';
 
-export async function POST(req: NextRequest) {
+const BLOCKED_PHRASES = [
+  'kill myself', 'end my life', 'hurt myself', 'self harm', 'suicide',
+  'kill him', 'kill her', 'kill them', 'hurt them', 'hurt her', 'hurt him',
+];
+
+const CRISIS_WORDS = [
+  'desperate', 'hopeless', 'unbearable', 'trapped', 'no way out',
+  'falling apart', 'can\'t take it', 'breaking down',
+];
+
+const SIGNAL_PATTERNS: Array<{ pattern: RegExp; tag: string }> = [
+  { pattern: /conflict|argument|fight|disagree/i, tag: 'conflict' },
+  { pattern: /pressure|stress|overwhelm|deadline/i, tag: 'pressure' },
+  { pattern: /uncertain|unsure|don\'t know|confused/i, tag: 'uncertainty' },
+  { pattern: /boundary|limit|too much|stop|enough/i, tag: 'boundary issue' },
+  { pattern: /decide|decision|choose|choice|option/i, tag: 'decision tension' },
+];
+
+function inferSafety(text: string): AnalysisResponse['safety'] {
+  const lower = text.toLowerCase();
+  if (BLOCKED_PHRASES.some((p) => lower.includes(p))) return 'blocked';
+  if (CRISIS_WORDS.some((w) => lower.includes(w))) return 'review';
+  return 'safe';
+}
+
+function inferSignals(text: string): string[] {
+  const found = SIGNAL_PATTERNS
+    .filter(({ pattern }) => pattern.test(text))
+    .map(({ tag }) => tag);
+  if (found.length === 0) return ['interpersonal tension'];
+  return found.slice(0, 4);
+}
+
+function buildSummary(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= 80) return `Input describes: "${trimmed}".`;
+  return `Input describes: "${trimmed.slice(0, 77)}...".`;
+}
+
+function buildNextStep(safety: AnalysisResponse['safety'], signals: string[]): string {
+  if (safety === 'blocked') return 'Please reach out to a trusted person or a crisis line.';
+  if (safety === 'review') return 'Take a breath. Grounding first — then look at what you can control right now.';
+  const primary = signals[0];
+  const map: Record<string, string> = {
+    'conflict': 'Identify one concrete request you can make without blame.',
+    'pressure': 'Break the situation into the smallest next action.',
+    'uncertainty': 'Name the one thing you most need clarity on.',
+    'boundary issue': 'Decide what you are and are not willing to do — then say it plainly.',
+    'decision tension': 'Write out the two real options and what each one costs.',
+    'interpersonal tension': 'Notice your role in the dynamic before responding.',
+  };
+  return map[primary] ?? 'Pause before responding. Clarity comes before action.';
+}
+
+export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const parseResult = AnalyzeInputEnvelopeSchema.safeParse(body);
+    const raw = typeof body?.text === 'string' ? body.text.trim() : '';
 
-    if (!parseResult.success) {
-      return NextResponse.json({ error: "Invalid input envelope", details: parseResult.error }, { status: 400 });
+    if (!raw) {
+      return NextResponse.json({ error: 'Missing text' }, { status: 400 });
     }
 
-    const input = parseResult.data;
+    const safety = inferSafety(raw);
+    const signals = inferSignals(raw);
 
-    // 1. Staged Pipeline Build
-    const sharedAnalysis = await buildSharedAnalysis(input);
+    const result: AnalysisResponse = {
+      summary: buildSummary(raw),
+      input: raw,
+      safety,
+      signals,
+      nextStep: buildNextStep(safety, signals),
+    };
 
-    // 2. Deterministic Canvas Scene Derivation
-    const canvasScene = buildInitialCanvasScene(sharedAnalysis);
-
-    // 3. Learn Module Derivation
-    const learnModule = mockLearnModule; // Scaffolded. Normally buildLearnModule(sharedAnalysis)
-
-    // 4. Persistence
-    // In strict environments, we try/catch persistence so the request still completes if DB isn't migrated
-    try {
-      await saveSharedAnalysis(sharedAnalysis);
-      await saveCanvasScene(canvasScene, sharedAnalysis.id);
-      
-      if (input.workspaceSessionId) {
-        await saveWorkspaceSession({
-          id: input.workspaceSessionId,
-          latestAnalysisId: sharedAnalysis.id,
-          latestSceneId: canvasScene.id,
-          latestLearnModuleId: learnModule.id,
-          activeSurface: input.requestedSurface || "main",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-      }
-    } catch (e) {
-      console.warn("Persistence failed during /api/analyze. Returning ephemeral response.", e);
-    }
-
-    // 5. Canonical Response
-    return NextResponse.json({
-      requestId: generateCanonicalId("analysis"),
-      safetyDecision: sharedAnalysis.safetyDecision,
-      sharedAnalysis,
-      canvasScene,
-      learnModule,
-    });
-  } catch (error) {
-    console.error("Analysis pipeline failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(result);
+  } catch {
+    return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }
 }

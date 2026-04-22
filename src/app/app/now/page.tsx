@@ -1,85 +1,103 @@
-import { getLatestSession } from "@/lib/server/workspace/get-latest-session";
-import { hydrateSession } from "@/lib/server/workspace/hydrate-session";
-import { mockSharedAnalysis } from "@/lib/canonical/fixtures/shared-analysis.fixture";
-import { resolveSafetyMode, getAllowedSurfaces, getUiIntensity } from "@/lib/server/safety";
-import { SafetyModeBadge } from "@/components/shared/SafetyModeBadge";
-import Link from "next/link";
+'use client';
 
-export default async function Now() {
-  const session = await getLatestSession();
-  const analysis = session ? (await hydrateSession(session)).sharedAnalysis : mockSharedAnalysis;
+import { useEffect, useState } from 'react';
+import type { AnalysisResponse } from '@/lib/types/analysis';
 
-  const mode = resolveSafetyMode({ analysis });
-  const allowedSurfaces = getAllowedSurfaces(mode);
-  const intensity = getUiIntensity(mode);
+const SAFETY_COLORS: Record<AnalysisResponse['safety'], string> = {
+  safe: '#2d6a2d',
+  review: '#856400',
+  blocked: '#9b1c1c',
+};
+
+const SAFETY_LABELS: Record<AnalysisResponse['safety'], string> = {
+  safe: 'Safe',
+  review: 'Needs Review',
+  blocked: 'Blocked',
+};
+
+export default function NowPage() {
+  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('defrag.latestAnalysis');
+      if (raw) setAnalysis(JSON.parse(raw));
+    } catch {
+      // sessionStorage unavailable or malformed
+    }
+    setReady(true);
+  }, []);
+
+  if (!ready) return null;
+
+  if (!analysis) {
+    return (
+      <main style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
+        <p style={{ color: '#555' }}>
+          No analysis yet.{' '}
+          <a href="/start" style={{ color: '#000', fontWeight: 'bold' }}>Start from /start.</a>
+        </p>
+      </main>
+    );
+  }
+
+  const safetyColor = SAFETY_COLORS[analysis.safety];
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "800px", margin: "0 auto", fontFamily: "sans-serif" }}>
-      <header style={{ marginBottom: "2rem", borderBottom: "1px solid #eee", paddingBottom: "1rem" }}>
-        <SafetyModeBadge mode={mode} />
-        <h1>DEFRAG / Now</h1>
-        <p>Canonical Analysis ID: {analysis.id}</p>
-      </header>
+    <main style={{ padding: '2rem', maxWidth: '640px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Now</h1>
 
-      <section style={{ marginBottom: "2rem" }}>
-        <h2>What is happening</h2>
-        <p><strong>Read:</strong> {analysis.summary.oneLineRead}</p>
-        <p>{analysis.summary.whatIsHappening}</p>
-        {intensity.depth !== "bounded" && (
-          <p><em>{analysis.summary.howItMayBeLanding}</em></p>
-        )}
+      <section style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>Summary</h2>
+        <p style={{ color: '#333' }}>{analysis.summary}</p>
       </section>
 
-      <section style={{ marginBottom: "2rem" }}>
-        <h2>Active Loop: {analysis.activeLoop.label}</h2>
-        {intensity.depth !== "bounded" && <p>Shape: {analysis.activeLoop.relationalShape}</p>}
-        <code>{analysis.activeLoop.description}</code>
+      <section style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>Safety</h2>
+        <span
+          style={{
+            display: 'inline-block',
+            padding: '0.25rem 0.75rem',
+            background: safetyColor,
+            color: '#fff',
+            borderRadius: '4px',
+            fontSize: '0.85rem',
+            fontWeight: 'bold',
+          }}
+        >
+          {SAFETY_LABELS[analysis.safety]}
+        </span>
       </section>
 
-      <section style={{ marginBottom: "2rem", padding: "1rem", background: "#f9f9f9", borderRadius: "8px" }}>
-        <h3>Role Active Now: {analysis.userState.roleLabel}</h3>
-        <p>Expression: <strong>{analysis.userState.expressionState}</strong></p>
-        <p>Pressure: {analysis.userState.pressureLabel}</p>
+      <section style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>Signals</h2>
+        <ul style={{ paddingLeft: '1.25rem', margin: 0 }}>
+          {analysis.signals.map((s) => (
+            <li key={s} style={{ marginBottom: '0.25rem', color: '#444' }}>{s}</li>
+          ))}
+        </ul>
       </section>
 
-      <section style={{ marginBottom: "2rem" }}>
-        <h2>Clean Move</h2>
-        <p><strong>Move:</strong> {analysis.recommendation.cleanMove}</p>
-        <p><strong>Try saying:</strong> "{analysis.recommendation.openingLine}"</p>
-        {intensity.depth !== "bounded" && (
-          <p style={{ color: "red" }}><strong>Avoid:</strong> {analysis.recommendation.whatNotToDo}</p>
-        )}
+      <section
+        style={{
+          marginBottom: '1.5rem',
+          padding: '1rem',
+          background: '#f5f5f5',
+          borderRadius: '6px',
+          borderLeft: '4px solid #000',
+        }}
+      >
+        <h2 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>Next Step</h2>
+        <p style={{ color: '#222', margin: 0 }}>{analysis.nextStep}</p>
       </section>
 
-      {intensity.depth === "full" && analysis.branchCues.length > 0 && (
-        <section style={{ marginBottom: "2rem", padding: "1rem", border: "1px solid #ddd", borderRadius: "8px" }}>
-          <h3>Branch Suggestions</h3>
-          <ul>
-            {analysis.branchCues.map((cue, i) => <li key={i}>{cue}</li>)}
-          </ul>
-        </section>
-      )}
-
-      <div style={{ display: "flex", gap: "1rem", marginTop: "3rem" }}>
-        {allowedSurfaces.includes("canvas") ? (
-          <Link href="/app/canvas" style={{ padding: "1rem", border: "1px solid #ccc", borderRadius: "8px", textDecoration: "none", color: "inherit", flex: 1 }}>
-            <h3>Open Canvas</h3>
-            <p>Scene Type: {analysis.sceneHints.sceneType}</p>
-          </Link>
-        ) : (
-          <div style={{ padding: "1rem", border: "1px dashed #ccc", borderRadius: "8px", flex: 1, opacity: 0.5 }}>
-            <h3>Canvas Unavailable</h3>
-            <p>Not accessible in current safety mode.</p>
-          </div>
-        )}
-        
-        {allowedSurfaces.includes("learn") && (
-          <Link href="/app/learn" style={{ padding: "1rem", border: "1px solid #ccc", borderRadius: "8px", textDecoration: "none", color: "inherit", flex: 1 }}>
-            <h3>Learn Pattern</h3>
-            <p>{analysis.learnHints.title}</p>
-          </Link>
-        )}
-      </div>
+      <a
+        href="/start"
+        style={{ color: '#555', fontSize: '0.9rem', textDecoration: 'underline' }}
+      >
+        ← Analyze another situation
+      </a>
     </main>
   );
 }

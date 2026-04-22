@@ -1,112 +1,86 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { submitStartFlow } from "./actions";
+import { useState } from 'react';
+import type { AnalysisResponse } from '@/lib/types/analysis';
 
 export default function StartPage() {
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    birthDate: "",
-    birthTime: "",
-    city: "",
-    country: "",
-  });
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const isTimeMissing = !formData.birthTime;
+  async function handleSubmit() {
+    const trimmed = input.trim();
+    if (!trimmed) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: trimmed }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error ?? 'Analysis failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      const result: AnalysisResponse = await res.json();
+      sessionStorage.setItem('defrag.latestAnalysis', JSON.stringify(result));
+      window.location.href = '/app/now';
+    } catch {
+      setError('Network error. Please try again.');
+      setLoading(false);
+    }
+  }
 
   return (
-    <main style={{ maxWidth: "600px", margin: "4rem auto", padding: "2rem", fontFamily: "sans-serif" }}>
-      <header style={{ marginBottom: "2rem" }}>
-        <h1>DEFRAG Initialization</h1>
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-          {[1, 2, 3].map(s => (
-            <div key={s} style={{ height: "4px", flex: 1, background: s <= step ? "#000" : "#eee" }} />
-          ))}
-        </div>
-      </header>
+    <main style={{ padding: '2rem', maxWidth: '560px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Describe the situation</h1>
+      <p style={{ color: '#555', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+        Be as specific as you can. What is actually happening right now?
+      </p>
 
-      {step === 1 && (
-        <section>
-          <h2>When did you arrive?</h2>
-          <p style={{ color: "#666", marginBottom: "1.5rem" }}>
-            This baseline date anchors the canonical pacing of your field.
-          </p>
-          <input 
-            type="date" 
-            value={formData.birthDate}
-            onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
-            style={{ width: "100%", padding: "1rem", fontSize: "1.2rem", marginBottom: "1rem" }}
-          />
-          <button 
-            onClick={() => setStep(2)}
-            disabled={!formData.birthDate}
-            style={{ width: "100%", padding: "1rem", background: formData.birthDate ? "#000" : "#ccc", color: "#fff", cursor: "pointer", border: "none" }}
-          >
-            Continue
-          </button>
-        </section>
+      <textarea
+        rows={6}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="What is happening in this relationship or situation?"
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          fontSize: '1rem',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          marginBottom: '1rem',
+          resize: 'vertical',
+          boxSizing: 'border-box',
+        }}
+      />
+
+      {error && (
+        <p style={{ color: '#c00', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</p>
       )}
 
-      {step === 2 && (
-        <section>
-          <h2>Where and exactly when?</h2>
-          <p style={{ color: "#666", marginBottom: "1.5rem" }}>
-            Time and location determine the exact structural tension in your baseline. If you do not know the exact time, leave it blank.
-          </p>
-          <input 
-            type="time" 
-            value={formData.birthTime}
-            onChange={e => setFormData({ ...formData, birthTime: e.target.value })}
-            placeholder="Birth Time (Optional)"
-            style={{ width: "100%", padding: "1rem", fontSize: "1.2rem", marginBottom: "1rem" }}
-          />
-          <input 
-            type="text" 
-            value={formData.city}
-            onChange={e => setFormData({ ...formData, city: e.target.value })}
-            placeholder="City"
-            style={{ width: "100%", padding: "1rem", fontSize: "1.2rem", marginBottom: "1rem" }}
-          />
-          <button 
-            onClick={() => setStep(3)}
-            style={{ width: "100%", padding: "1rem", background: "#000", color: "#fff", cursor: "pointer", border: "none" }}
-          >
-            Continue
-          </button>
-        </section>
-      )}
-
-      {step === 3 && (
-        <section>
-          <h2>Baseline Preview</h2>
-          <div style={{ background: "#f9f9f9", padding: "1.5rem", borderRadius: "8px", marginBottom: "2rem" }}>
-            {isTimeMissing && (
-              <div style={{ background: "#fff3e0", padding: "1rem", borderLeft: "4px solid #e65100", marginBottom: "1rem" }}>
-                <strong>Estimated Confidence</strong>
-                <p style={{ margin: "0.5rem 0 0", fontSize: "0.9rem" }}>
-                  Because exact birth time was omitted, some pacing and boundary mechanics will use estimated defensive defaults.
-                </p>
-              </div>
-            )}
-            <p><strong>Date:</strong> {formData.birthDate}</p>
-            <p><strong>Time:</strong> {formData.birthTime || "Fallback (12:00 PM)"}</p>
-            <p><strong>Location:</strong> {formData.city}</p>
-
-            <hr style={{ margin: "1.5rem 0", border: "none", borderTop: "1px solid #ccc" }} />
-            
-            <p style={{ color: "#444" }}>This initializes your durable workspace session. The platform will now derive the first real-time analysis surface.</p>
-          </div>
-
-          <form action={() => submitStartFlow(formData)}>
-            <button 
-              type="submit"
-              style={{ width: "100%", padding: "1rem", background: "#000", color: "#fff", cursor: "pointer", border: "none" }}
-            >
-              Enter Workspace
-            </button>
-          </form>
-        </section>
-      )}
+      <button
+        onClick={handleSubmit}
+        disabled={loading || !input.trim()}
+        style={{
+          padding: '0.75rem 1.5rem',
+          background: loading || !input.trim() ? '#999' : '#000',
+          color: '#fff',
+          border: 'none',
+          fontWeight: 'bold',
+          cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+          fontSize: '1rem',
+        }}
+      >
+        {loading ? 'Analyzing...' : 'Analyze'}
+      </button>
     </main>
   );
 }
