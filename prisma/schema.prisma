@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model WorkspaceSession {
+  id                  String   @id
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  latestAnalysisId    String
+  latestSceneId       String?
+  latestLearnModuleId String?
+  activeSurface       String
+  title               String?
+
+  // Relations
+  analysis    SharedAnalysisRecord @relation(fields: [latestAnalysisId], references: [id])
+  scene       CanvasSceneRecord?   @relation(fields: [latestSceneId], references: [id])
+  learnModule LearnModuleRecord?   @relation(fields: [latestLearnModuleId], references: [id])
+}
+
+model SharedAnalysisRecord {
+  id         String   @id
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  version    String   @default("1.0")
+  payload    String   // Storing validated JSON string
+
+  workspaceSessions WorkspaceSession[]
+}
+
+model CanvasSceneRecord {
+  id         String   @id
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  analysisId String
+  payload    String   // Storing validated JSON string
+
+  workspaceSessions WorkspaceSession[]
+}
+
+model LearnModuleRecord {
+  id         String   @id
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  analysisId String
+  payload    String   // Storing validated JSON string
+
+  workspaceSessions WorkspaceSession[]
+}
