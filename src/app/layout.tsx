@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AnalysisProvider } from '@/components/providers/AnalysisProvider';
 
 export const metadata: Metadata = {
   title: "DEFRAG",
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
+        <AnalysisProvider>
+          {children}
+        </AnalysisProvider>
       </body>
     </html>
   );
