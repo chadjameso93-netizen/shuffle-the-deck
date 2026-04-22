@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAnalysis } from '@/components/providers/AnalysisProvider';
 import type { AnalysisResponse } from '@/lib/types/analysis';
 
@@ -15,10 +17,47 @@ const SAFETY_LABELS: Record<AnalysisResponse['safety'], string> = {
   blocked: 'Blocked',
 };
 
-export default function NowPage() {
-  const { latestAnalysis } = useAnalysis();
+function parseQueryParam(raw: string | null): AnalysisResponse | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(decodeURIComponent(raw));
+    if (
+      typeof parsed?.summary === 'string' &&
+      typeof parsed?.input === 'string' &&
+      (parsed?.safety === 'safe' || parsed?.safety === 'review' || parsed?.safety === 'blocked') &&
+      Array.isArray(parsed?.signals) &&
+      typeof parsed?.nextStep === 'string'
+    ) {
+      return parsed as AnalysisResponse;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
-  if (!latestAnalysis) {
+export default function NowPage() {
+  const { latestAnalysis, setLatestAnalysis } = useAnalysis();
+  const searchParams = useSearchParams();
+  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
+
+  useEffect(() => {
+    // Primary: use provider state
+    if (latestAnalysis) {
+      setAnalysis(latestAnalysis);
+      return;
+    }
+
+    // Fallback: decode from URL query param 'a'
+    const fromParam = parseQueryParam(searchParams.get('a'));
+    if (fromParam) {
+      setAnalysis(fromParam);
+      // Sync back into provider so downstream reads are consistent
+      setLatestAnalysis(fromParam);
+    }
+  }, [latestAnalysis, searchParams, setLatestAnalysis]);
+
+  if (!analysis) {
     return (
       <main style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
         <p style={{ color: '#555' }}>
@@ -29,7 +68,7 @@ export default function NowPage() {
     );
   }
 
-  const safetyColor = SAFETY_COLORS[latestAnalysis.safety];
+  const safetyColor = SAFETY_COLORS[analysis.safety];
 
   return (
     <main style={{ padding: '2rem', maxWidth: '640px', margin: '0 auto', fontFamily: 'sans-serif' }}>
@@ -37,7 +76,7 @@ export default function NowPage() {
 
       <section style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>Summary</h2>
-        <p style={{ color: '#333' }}>{latestAnalysis.summary}</p>
+        <p style={{ color: '#333' }}>{analysis.summary}</p>
       </section>
 
       <section style={{ marginBottom: '1.5rem' }}>
@@ -53,14 +92,14 @@ export default function NowPage() {
             fontWeight: 'bold',
           }}
         >
-          {SAFETY_LABELS[latestAnalysis.safety]}
+          {SAFETY_LABELS[analysis.safety]}
         </span>
       </section>
 
       <section style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>Signals</h2>
         <ul style={{ paddingLeft: '1.25rem', margin: 0 }}>
-          {latestAnalysis.signals.map((s) => (
+          {analysis.signals.map((s) => (
             <li key={s} style={{ marginBottom: '0.25rem', color: '#444' }}>{s}</li>
           ))}
         </ul>
@@ -76,7 +115,7 @@ export default function NowPage() {
         }}
       >
         <h2 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>Next Step</h2>
-        <p style={{ color: '#222', margin: 0 }}>{latestAnalysis.nextStep}</p>
+        <p style={{ color: '#222', margin: 0 }}>{analysis.nextStep}</p>
       </section>
 
       <a

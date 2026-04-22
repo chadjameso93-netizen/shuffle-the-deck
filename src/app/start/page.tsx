@@ -34,8 +34,13 @@ export default function StartPage() {
       }
 
       const result: AnalysisResponse = await res.json();
+
+      // Primary: set in shared provider
       setLatestAnalysis(result);
-      router.push('/app/now');
+
+      // Fallback: encode in URL so /app/now survives a refresh
+      const encoded = encodeURIComponent(JSON.stringify(result));
+      router.push('/app/now?a=' + encoded);
     } catch {
       setError('Network error. Please try again.');
       setLoading(false);
