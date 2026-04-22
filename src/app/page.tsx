@@ -1,30 +1,26 @@
-import { getLatestSession } from "@/lib/server/workspace/get-latest-session";
-import Link from "next/link";
+import Link from 'next/link';
 
-export default async function Home() {
-  const session = await getLatestSession();
-
+export default function Home() {
   return (
-    <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>DEFRAG: Operating System</h1>
-      <p>The relational reasoning platform.</p>
-      
-      <div style={{ marginTop: "2rem" }}>
-        {session ? (
-          <div style={{ padding: "1rem", border: "1px solid #ccc", borderRadius: "8px" }}>
-            <h2>Active Session Found</h2>
-            <p>Title: {session.title}</p>
-            <p>Started: {new Date(session.createdAt).toLocaleString()}</p>
-            <Link href={`/app/${session.activeSurface}`} style={{ display: "inline-block", marginTop: "1rem", padding: "0.5rem 1rem", background: "#000", color: "#fff", textDecoration: "none", borderRadius: "4px" }}>
-              Resume Current Field
-            </Link>
-          </div>
-        ) : (
-          <Link href="/start" style={{ display: "inline-block", padding: "0.5rem 1rem", background: "#000", color: "#fff", textDecoration: "none", borderRadius: "4px" }}>
-            Start New Analysis
-          </Link>
-        )}
-      </div>
+    <main style={{ padding: '2rem', maxWidth: '480px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>DEFRAG</h1>
+      <p style={{ color: '#555', marginBottom: '2rem' }}>
+        Structured interpersonal analysis.
+      </p>
+
+      <Link
+        href="/start"
+        style={{
+          display: 'inline-block',
+          padding: '0.75rem 1.5rem',
+          background: '#000',
+          color: '#fff',
+          textDecoration: 'none',
+          fontWeight: 'bold',
+        }}
+      >
+        Start
+      </Link>
     </main>
   );
 }
