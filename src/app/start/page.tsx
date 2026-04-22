@@ -1,12 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAnalysis } from '@/components/providers/AnalysisProvider';
 import type { AnalysisResponse } from '@/lib/types/analysis';
 
 export default function StartPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { setLatestAnalysis } = useAnalysis();
+  const router = useRouter();
 
   async function handleSubmit() {
     const trimmed = input.trim();
@@ -30,8 +34,8 @@ export default function StartPage() {
       }
 
       const result: AnalysisResponse = await res.json();
-      sessionStorage.setItem('defrag.latestAnalysis', JSON.stringify(result));
-      window.location.href = '/app/now';
+      setLatestAnalysis(result);
+      router.push('/app/now');
     } catch {
       setError('Network error. Please try again.');
       setLoading(false);

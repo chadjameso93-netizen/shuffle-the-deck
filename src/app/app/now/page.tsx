@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useAnalysis } from '@/components/providers/AnalysisProvider';
 import type { AnalysisResponse } from '@/lib/types/analysis';
 
 const SAFETY_COLORS: Record<AnalysisResponse['safety'], string> = {
@@ -16,22 +16,9 @@ const SAFETY_LABELS: Record<AnalysisResponse['safety'], string> = {
 };
 
 export default function NowPage() {
-  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
-  const [ready, setReady] = useState(false);
+  const { latestAnalysis } = useAnalysis();
 
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem('defrag.latestAnalysis');
-      if (raw) setAnalysis(JSON.parse(raw));
-    } catch {
-      // sessionStorage unavailable or malformed
-    }
-    setReady(true);
-  }, []);
-
-  if (!ready) return null;
-
-  if (!analysis) {
+  if (!latestAnalysis) {
     return (
       <main style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
         <p style={{ color: '#555' }}>
@@ -42,7 +29,7 @@ export default function NowPage() {
     );
   }
 
-  const safetyColor = SAFETY_COLORS[analysis.safety];
+  const safetyColor = SAFETY_COLORS[latestAnalysis.safety];
 
   return (
     <main style={{ padding: '2rem', maxWidth: '640px', margin: '0 auto', fontFamily: 'sans-serif' }}>
@@ -50,7 +37,7 @@ export default function NowPage() {
 
       <section style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>Summary</h2>
-        <p style={{ color: '#333' }}>{analysis.summary}</p>
+        <p style={{ color: '#333' }}>{latestAnalysis.summary}</p>
       </section>
 
       <section style={{ marginBottom: '1.5rem' }}>
@@ -66,14 +53,14 @@ export default function NowPage() {
             fontWeight: 'bold',
           }}
         >
-          {SAFETY_LABELS[analysis.safety]}
+          {SAFETY_LABELS[latestAnalysis.safety]}
         </span>
       </section>
 
       <section style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>Signals</h2>
         <ul style={{ paddingLeft: '1.25rem', margin: 0 }}>
-          {analysis.signals.map((s) => (
+          {latestAnalysis.signals.map((s) => (
             <li key={s} style={{ marginBottom: '0.25rem', color: '#444' }}>{s}</li>
           ))}
         </ul>
@@ -89,7 +76,7 @@ export default function NowPage() {
         }}
       >
         <h2 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>Next Step</h2>
-        <p style={{ color: '#222', margin: 0 }}>{analysis.nextStep}</p>
+        <p style={{ color: '#222', margin: 0 }}>{latestAnalysis.nextStep}</p>
       </section>
 
       <a
