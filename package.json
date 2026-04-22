@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest"
@@ -14,14 +14,14 @@
     "react": "latest",
     "react-dom": "latest",
     "zod": "^3.22.4",
-    "@prisma/client": "latest"
+    "@prisma/client": "6.1.0"
   },
   "devDependencies": {
     "typescript": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "prisma": "latest",
+    "prisma": "6.1.0",
     "vitest": "latest",
     "@testing-library/react": "latest",
     "@testing-library/jest-dom": "latest",
