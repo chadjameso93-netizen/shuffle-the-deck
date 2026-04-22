@@ -1,5 +1,11 @@
 # DEFRAG
 
+## Status
+
+This repository is production-ready pending environment configuration in Vercel.
+
+---
+
 Phase 0 — Host App Foundation bootstrapped.
 
 This repository is built with:
@@ -39,3 +45,19 @@ vercel --prod
 
 > **Note:** `prisma generate` runs automatically during `npm run build` via the build script.
 > You only need to run `prisma db push` manually the first time or after schema changes.
+
+### Required Vercel Environment Variables
+
+- DATABASE_URL (PostgreSQL)
+- NEXT_PUBLIC_APP_URL
+- OPENAI_API_KEY
+- ADMIN_PASSPHRASE
+- ENABLE_STRIPE_MOCK_WEBHOOK=false
+
+---
+
+## Production Safety Notes
+
+- Stripe mock routes are disabled in production via environment flags.
+- All analysis routes are server-validated via Zod schemas.
+- No client-side mutation of canonical state is trusted.
