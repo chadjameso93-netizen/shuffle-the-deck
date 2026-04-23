@@ -1,21 +1,10 @@
 import Link from 'next/link';
+import PageShell from '@/components/PageShell';
 
 export default function Home() {
   return (
-    <main style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '2rem',
-      background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 50%, #16213e 100%)',
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '520px',
-        textAlign: 'center',
-      }}>
+    <PageShell maxWidth="520px">
+      <div style={{ textAlign: 'center' }}>
 
         {/* Logo mark */}
         <div style={{
@@ -77,6 +66,6 @@ export default function Home() {
         }}>No account required.</p>
 
       </div>
-    </main>
+    </PageShell>
   );
 }
