@@ -1,0 +1,41 @@
+name: Aider Codegen
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Instruction for Aider (what to change/build)"
+        required: true
+      model:
+        description: "LLM model name"
+        required: true
+        default: "gpt-4.1-mini"
+
+jobs:
+  aider:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Create work branch
+        id: create_branch
+        run: |
+          BRANCH="aider-run-${{ github.run_id }}"
+          git checkout -b "$BRANCH"
+          echo "{\"ref\": \"refs/heads/$BRANCH\"}" > branch.json
+          echo "result=$(cat branch.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Run Aider
+        uses: mirrajabi/aider-github-action@v1.1.0
+        with:
+          api_key_env_name: OPENAI_API_KEY
+          api_key_env_value: ${{ secrets.OPENAI_API_KEY }}
+          branch: ${{ fromJson(steps.create_branch.outputs.result).ref }}
+          model: ${{ inputs.model }}
+          aider_args: "--yes --message \"${{ inputs.message }}\""
+
+      - name: Push branch
+        run: |
+          git push origin HEAD
