@@ -1,0 +1,22 @@
+# Aider repository configuration
+# Keep secrets out of this file. Configure provider keys in GitHub Actions secrets
+# or local environment variables, e.g. OPENAI_API_KEY.
+
+# Core behavior
+git: true
+aiderignore: .aiderignore
+auto-commits: false
+dirty-commits: false
+auto-lint: true
+auto-test: false
+show-diffs: true
+yes-always: true
+
+# Project commands
+lint-cmd: npm run lint
+test-cmd: npm test
+
+# Useful context for Aider. These files are read-only context by default.
+read:
+  - README.md
+  - package.json
