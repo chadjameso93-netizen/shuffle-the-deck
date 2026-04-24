@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: shuffle-the-deck
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    buildCommand: npm install && npm run render:build
+    startCommand: npm run render:start
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_PASSPHRASE
+        sync: false
+      - key: ENABLE_STRIPE_MOCK_WEBHOOK
+        value: "false"
