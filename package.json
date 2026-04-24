@@ -2,12 +2,19 @@
   "name": "defrag",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest"
+    "test": "vitest",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "render:build": "prisma generate && next build",
+    "render:start": "next start -p ${PORT:-3000}"
   },
   "dependencies": {
     "next": "latest",
