@@ -22,6 +22,6 @@ jobs:
           else
             npm install
           fi
-      - run: npm run lint
+      - run: npx next lint --dir .
       - run: npm test
       - run: npm run build
